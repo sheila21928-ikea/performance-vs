@@ -1,0 +1,418 @@
+
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>奇美醫院 - 主治醫師績效管理系統</title>
+    <!-- 引入 Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Babel 用於在瀏覽器中編譯 JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body { font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; }
+        .animate-fadeIn { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* 自定義滾動條 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #EBE3DC; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #C27A62; }
+    </style>
+</head>
+<body class="bg-[#FDFBF7] text-[#5C433A]">
+    <!-- React 應用的掛載點 -->
+    <div id="root"></div>
+
+    <!-- 應用主體程式碼 (React + JSX) -->
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect } from 'https://esm.sh/react@18';
+        import { createRoot } from 'https://esm.sh/react-dom@18/client';
+        import { 
+          Stethoscope, UploadCloud, FileText, LineChart, 
+          Calendar, CheckCircle2, Loader2, Edit2, 
+          ChevronRight, ChevronLeft, LogOut, Save, Image as ImageIcon
+        } from 'https://esm.sh/lucide-react@0.292.0';
+
+        // --- 自定義主題色系 (大地暖色調) ---
+        const theme = {
+          bg: 'bg-[#FDFBF7]',
+          card: 'bg-[#FFFFFF]',
+          primary: 'bg-[#C27A62]',
+          primaryHover: 'hover:bg-[#A35D46]',
+          primaryText: 'text-[#C27A62]',
+          primaryLight: 'bg-[#F3E8E0]',
+          border: 'border-[#EBE3DC]',
+          textMain: 'text-[#5C433A]',
+          textLight: 'text-[#8B736A]',
+        };
+
+        function App() {
+          const [user, setUser] = useState(null);
+          const [currentYear, setCurrentYear] = useState(114);
+          const [currentMonth, setCurrentMonth] = useState(12);
+          const [toast, setToast] = useState(null);
+
+          const showToast = (msg) => {
+            setToast(msg);
+            setTimeout(() => setToast(null), 3000);
+          };
+
+          const handlePrevMonth = () => {
+            if (currentMonth === 1) {
+              setCurrentMonth(12);
+              setCurrentYear(y => y - 1);
+            } else {
+              setCurrentMonth(m => m - 1);
+            }
+          };
+
+          const handleNextMonth = () => {
+            if (currentMonth === 12) {
+              setCurrentMonth(1);
+              setCurrentYear(y => y + 1);
+            } else {
+              setCurrentMonth(m => m + 1);
+            }
+          };
+
+          const handleLogout = () => {
+            setUser(null);
+            showToast('已登出系統');
+          };
+
+          // 尚未登入時顯示登入畫面
+          if (!user) {
+            return <LoginView onLogin={(userData) => { 
+              setUser(userData); 
+              showToast(`歡迎登入，${userData.name} 醫師`); 
+            }} />;
+          }
+
+          return (
+            <div className={`min-h-screen ${theme.bg} ${theme.textMain} font-sans flex flex-col`}>
+              {/* 頂部導航 */}
+              <header className={`${theme.card} border-b ${theme.border} shadow-sm sticky top-0 z-50`}>
+                <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Stethoscope className={`w-6 h-6 ${theme.primaryText}`} strokeWidth={1.5} />
+                    <h1 className="font-bold text-lg tracking-wide hidden sm:block">
+                      奇美醫院 <span className="font-normal opacity-80">| 醫師績效管理端</span>
+                    </h1>
+                  </div>
+                  
+                  {/* 月份切換器 */}
+                  <div className="flex items-center gap-3 bg-[#FDFBF7] px-4 py-1.5 rounded-full border border-[#EBE3DC]">
+                    <button onClick={handlePrevMonth} className="p-1 hover:bg-[#E8CDBF] rounded-full transition-colors text-[#8B736A]">
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <span className="font-bold text-[#5C433A] min-w-[110px] text-center text-sm">
+                      {currentYear} 年 {currentMonth} 月
+                    </span>
+                    <button onClick={handleNextMonth} className="p-1 hover:bg-[#E8CDBF] rounded-full transition-colors text-[#8B736A]">
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* 使用者資訊與登出 */}
+                  <div className="flex items-center gap-4">
+                    <div className="text-right hidden sm:block">
+                      <div className="text-sm font-bold">{user.name}</div>
+                      <div className="text-xs text-[#8B736A]">{user.department}</div>
+                    </div>
+                    <button onClick={handleLogout} className="p-2 text-[#8B736A] hover:text-[#C27A62] hover:bg-[#F3E8E0] rounded-full transition-colors" title="登出">
+                      <LogOut className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              </header>
+
+              {/* 主要內容區 */}
+              <main className="flex-1 max-w-5xl w-full mx-auto px-6 py-8">
+                <PhysicianView showToast={showToast} year={currentYear} month={currentMonth} user={user} />
+              </main>
+
+              {/* Toast 通知 */}
+              {toast && (
+                <div className="fixed bottom-6 right-6 bg-[#5C433A] text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-fadeIn z-50">
+                  <CheckCircle2 className="w-5 h-5 text-green-400" />
+                  {toast}
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        // --- 登入畫面組件 ---
+        function LoginView({ onLogin }) {
+          return (
+            <div className={`min-h-screen ${theme.bg} flex items-center justify-center p-4`}>
+              <div className={`${theme.card} w-full max-w-sm p-8 rounded-2xl shadow-xl border ${theme.border} animate-fadeIn`}>
+                <div className="flex justify-center mb-6">
+                  <div className={`w-16 h-16 rounded-full ${theme.primaryLight} flex items-center justify-center`}>
+                    <Stethoscope className={`w-8 h-8 ${theme.primaryText}`} strokeWidth={1.5} />
+                  </div>
+                </div>
+                <h2 className="text-2xl font-bold text-center mb-2 text-[#5C433A]">主治醫師績效系統</h2>
+                <p className="text-center text-[#8B736A] mb-8 text-sm">請點擊下方帳號進行登入測試</p>
+                
+                <button 
+                  onClick={() => onLogin({ role: 'physician', name: '黃琪雅', department: '一般內科 (7310)' })}
+                  className="w-full flex items-center justify-between p-4 rounded-xl border border-[#EBE3DC] hover:border-[#C27A62] hover:bg-[#FDFBF7] transition-all group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-[#E8CDBF] text-[#C27A62] flex items-center justify-center font-bold text-lg">
+                      黃
+                    </div>
+                    <div className="text-left">
+                      <div className="font-bold text-[#5C433A]">黃琪雅 醫師</div>
+                      <div className="text-xs text-[#8B736A]">一般內科 主治醫師</div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-[#C27A62]" />
+                </button>
+              </div>
+            </div>
+          );
+        }
+
+        // --- 醫師專屬視圖組件 ---
+        function PhysicianView({ showToast, year, month, user }) {
+          const [tab, setTab] = useState('form');
+          const [isUploading, setIsUploading] = useState(false);
+          const [aiProcessed, setAiProcessed] = useState(false);
+          
+          // 表單資料狀態 (依據您提供的圖片欄位設計)
+          const [formData, setFormData] = useState({
+            clinicalTeaching: '',
+            pgyGuidance: '',
+            departmentAffairs: '',
+            hospitalAffairs: ''
+          });
+
+          const handleUpload = () => {
+            setIsUploading(true);
+            setAiProcessed(false);
+            
+            // 模擬 AI 處理延遲
+            setTimeout(() => {
+              setIsUploading(false);
+              setAiProcessed(true);
+              // 自動填入模擬資料 (從圖片解析而來)
+              setFormData({
+                clinicalTeaching: '臨床病例教學討論: B / 114.12.11; 22; 24\n聯合討論會: H(教學檢討會) / 114.12.15\n死亡或併發症討論會: G / 114.11.08; 15; 22; 29',
+                pgyGuidance: 'PGY1 曾麟斐 (2分)\nUGY 劉林昌 (1分)',
+                departmentAffairs: '以內科部 UGY 負責人代表內科部參與 TMAC 中山醫評鑑 (12/10)\n以內科部 UGY 負責人代表內科部參與 TMAC 中山醫評鑑 (12/17)',
+                hospitalAffairs: '參加全院主管共識營擔任講者 (12/13)\n代表奇美醫院參與 NHQA 國家醫療品質獎獲得銅獎 (以 AI 奇博士)\n院內 A+ 我要問 prompt 應用競賽 臨床個案報告組 第二名 (11/28)'
+              });
+              showToast('AI 已成功辨識行事曆與截圖！您可以點擊欄位進行修改。');
+            }, 2500);
+          };
+
+          const handleSave = () => {
+            showToast('本月績效資料已成功儲存！');
+          };
+
+          const handleFormChange = (field, value) => {
+            setFormData(prev => ({ ...prev, [field]: value }));
+          };
+
+          return (
+            <div className="animate-fadeIn">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold mb-1">您好，{user.name} 醫師</h2>
+                <p className={`${theme.textLight}`}>請上傳您的行程紀錄，系統將自動為您生成 {year} 年 {month} 月份績效表。</p>
+              </div>
+
+              {/* 頁籤切換 */}
+              <div className={`flex border-b ${theme.border} mb-6`}>
+                <button 
+                  onClick={() => setTab('form')}
+                  className={`px-6 py-3 font-medium flex items-center gap-2 border-b-2 transition-colors ${tab === 'form' ? `border-[#C27A62] ${theme.primaryText}` : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                >
+                  <FileText className="w-4 h-4" strokeWidth={1.5} />
+                  當月績效表產出
+                </button>
+                <button 
+                  onClick={() => setTab('trend')}
+                  className={`px-6 py-3 font-medium flex items-center gap-2 border-b-2 transition-colors ${tab === 'trend' ? `border-[#C27A62] ${theme.primaryText}` : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                >
+                  <LineChart className="w-4 h-4" strokeWidth={1.5} />
+                  歷史績效趨勢
+                </button>
+              </div>
+
+              {/* 當月績效表產出內容區 */}
+              {tab === 'form' && (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  
+                  {/* 左側：上傳區塊 */}
+                  <div className="lg:col-span-4 space-y-4">
+                    <div className={`${theme.card} p-6 rounded-2xl border ${theme.border} shadow-sm h-full`}>
+                      <h3 className="font-bold mb-4 flex items-center gap-2 text-[#5C433A]">
+                        <Calendar className="w-5 h-5 text-[#C27A62]" strokeWidth={1.5}/> 匯入行程紀錄
+                      </h3>
+                      
+                      <div 
+                        onClick={!isUploading ? handleUpload : undefined}
+                        className={`border-2 border-dashed rounded-xl p-8 text-center transition-all h-[calc(100%-3rem)] flex flex-col justify-center items-center min-h-[250px]
+                          ${isUploading ? 'border-gray-300 bg-gray-50 cursor-wait' : `border-[#E2BCA5] hover:border-[#C27A62] hover:bg-[#FDFBF7] cursor-pointer`}`}
+                      >
+                        {isUploading ? (
+                          <div className="flex flex-col items-center gap-4 animate-fadeIn">
+                            <Loader2 className={`w-10 h-10 animate-spin ${theme.primaryText}`} />
+                            <p className={`${theme.primaryText} font-medium`}>AI 視覺模型解析中...</p>
+                            <p className="text-xs text-gray-400">正在萃取會議、教學與獲獎紀錄</p>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center gap-3 animate-fadeIn">
+                            <div className={`w-16 h-16 rounded-full ${theme.primaryLight} flex items-center justify-center mb-2`}>
+                              <ImageIcon className={`w-8 h-8 ${theme.primaryText}`} strokeWidth={1.5} />
+                            </div>
+                            <p className="font-medium text-[#5C433A]">點擊上傳行事曆或截圖</p>
+                            <p className="text-xs text-gray-400 leading-relaxed">支援 Google Calendar (.ics)<br/>或手機相簿圖片 (.jpg, .png)</p>
+                            
+                            <button className={`mt-4 bg-white border border-[#C27A62] text-[#C27A62] hover:bg-[#C27A62] hover:text-white px-4 py-2 rounded-lg text-sm transition-colors`}>
+                              選擇檔案
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 右側：AI 填寫結果 (可編輯表單) */}
+                  <div className="lg:col-span-8">
+                    <div className={`${theme.card} p-6 rounded-2xl border ${theme.border} shadow-sm relative overflow-hidden min-h-[400px] flex flex-col`}>
+                      
+                      {/* 未處理時的遮罩 */}
+                      {!aiProcessed && !isUploading && (
+                        <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] z-10 flex flex-col items-center justify-center">
+                          <div className="bg-white px-8 py-6 rounded-2xl shadow-lg border border-gray-100 text-center">
+                            <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" strokeWidth={1} />
+                            <p className="text-gray-500 font-medium">請先於左側上傳資料以啟動 AI 辨識</p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="flex flex-wrap justify-between items-end mb-6 gap-4 border-b border-gray-100 pb-4">
+                        <div>
+                          <h3 className="font-bold text-lg text-[#5C433A]">內科部主治醫師績效表</h3>
+                          {aiProcessed ? (
+                            <p className="text-sm text-[#C27A62] mt-1 flex items-center gap-1">
+                              <CheckCircle2 className="w-4 h-4" /> AI 已初步填寫，請點擊下方欄位進行修改確認
+                            </p>
+                          ) : (
+                            <p className="text-sm text-gray-400 mt-1">尚未匯入資料</p>
+                          )}
+                        </div>
+                        <button 
+                          onClick={handleSave} 
+                          disabled={!aiProcessed}
+                          className={`${!aiProcessed ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : `${theme.primary} ${theme.primaryHover} text-white shadow-sm`} px-5 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2`}
+                        >
+                          <Save className="w-4 h-4" /> 儲存並送出
+                        </button>
+                      </div>
+
+                      <div className="space-y-4 flex-1 overflow-y-auto pr-2">
+                        <FormField 
+                          label="一、科教學項目 (臨床病例教學/醫學文獻討論)" 
+                          value={formData.clinicalTeaching} 
+                          onChange={(v) => handleFormChange('clinicalTeaching', v)}
+                          editable={aiProcessed}
+                        />
+                        <FormField 
+                          label="二、住院醫師及實習醫學生指導" 
+                          value={formData.pgyGuidance} 
+                          onChange={(v) => handleFormChange('pgyGuidance', v)}
+                          editable={aiProcessed}
+                        />
+                        <FormField 
+                          label="三、科公共事務貢獻 (一般/特定 KPI)" 
+                          value={formData.departmentAffairs} 
+                          onChange={(v) => handleFormChange('departmentAffairs', v)}
+                          editable={aiProcessed}
+                        />
+                        <FormField 
+                          label="四、部公共事務貢獻 (全院主管/院外競賽)" 
+                          value={formData.hospitalAffairs} 
+                          onChange={(v) => handleFormChange('hospitalAffairs', v)}
+                          editable={aiProcessed}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 歷史績效趨勢內容區 */}
+              {tab === 'trend' && (
+                <div className={`${theme.card} p-8 rounded-2xl border ${theme.border} shadow-sm max-w-4xl mx-auto`}>
+                  <div className="flex justify-between items-center mb-8">
+                    <div>
+                      <h3 className="font-bold text-xl text-[#5C433A]">{year} 年度個人績效積分趨勢</h3>
+                      <p className="text-sm text-gray-500 mt-1">包含教學積分與公共事務積分總計</p>
+                    </div>
+                    <div className="bg-[#F8EFEA] px-4 py-2 rounded-lg text-[#C27A62] font-bold">
+                      年度平均：68.2 分
+                    </div>
+                  </div>
+
+                  <div className="h-72 flex items-end justify-between gap-3 pt-10 border-b border-gray-100 pb-2 relative">
+                    {/* 背景參考線 */}
+                    <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-2">
+                       <div className="border-b border-gray-100 w-full h-0"></div>
+                       <div className="border-b border-gray-100 w-full h-0"></div>
+                       <div className="border-b border-gray-100 w-full h-0"></div>
+                       <div className="border-b border-gray-100 w-full h-0"></div>
+                    </div>
+
+                    {[45, 52, 48, 60, 55, 65, 70, 68, 75, 82, 78, 85].map((val, i) => (
+                      <div key={i} className="relative flex flex-col items-center flex-1 group z-10">
+                        <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-all transform group-hover:-translate-y-1 bg-[#5C433A] text-white text-xs py-1.5 px-2.5 rounded shadow-lg whitespace-nowrap z-20">
+                          {val} 分
+                        </div>
+                        <div 
+                          className={`w-full max-w-[48px] rounded-t-lg transition-all duration-500 shadow-sm ${i + 1 === month ? 'bg-[#C27A62]' : 'bg-[#E8CDBF] hover:bg-[#D9B5A3]'}`}
+                          style={{ height: `${val}%` }}
+                        ></div>
+                        <span className={`text-sm mt-3 ${i + 1 === month ? 'text-[#C27A62] font-bold' : 'text-gray-500 font-medium'}`}>{i + 1}月</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        // 輔助表單欄位組件 (支援多行編輯)
+        function FormField({ label, value, onChange, editable = false }) {
+          return (
+            <div className={`bg-[#FDFBF7] p-4 rounded-xl border transition-all duration-200 ${editable ? 'border-[#C27A62]/40 hover:border-[#C27A62] hover:shadow-sm focus-within:border-[#C27A62] focus-within:ring-1 focus-within:ring-[#C27A62]' : 'border-gray-100'}`}>
+              <label className="block text-sm font-bold text-[#8B736A] mb-2 flex justify-between items-center">
+                {label}
+                {editable && <Edit2 className="w-3.5 h-3.5 text-[#C27A62] opacity-70" />}
+              </label>
+              <textarea 
+                className={`w-full bg-transparent border-none focus:ring-0 p-0 text-[15px] leading-relaxed text-[#5C433A] resize-none outline-none ${!editable && 'opacity-60'}`} 
+                rows={value ? value.split('\n').length : 2}
+                value={value}
+                readOnly={!editable}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder="等待 AI 辨識後將自動填入..."
+                style={{ minHeight: '60px' }}
+              />
+            </div>
+          );
+        }
+
+        // 渲染 React 應用程式
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
