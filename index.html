@@ -208,10 +208,6 @@
 
           // 🌟 核心修改：將資料寫入 Google 試算表的 API 呼叫
           const handleSave = async () => {
-            if (!GAS_API_URL || GAS_API_URL === "https://script.google.com/macros/s/AKfycbyEUIzdGZVpQWXUpmc_e3C7CJcRDMCXuwE0dpLaUeSoRKqlmESL82aDMozq8rVYMria/exec") {
-               showToast;
-               return;
-            }
 
             setIsSaving(true);
             showToast("正在傳送資料至資料庫...");
