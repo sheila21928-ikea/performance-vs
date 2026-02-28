@@ -1,12 +1,9 @@
-
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>奇美醫院 - 主治醫師績效管理系統</title>
-    <!-- 引入 Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 Babel 用於在瀏覽器中編譯 JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
         body { font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; }
@@ -23,10 +20,8 @@
     </style>
 </head>
 <body class="bg-[#FDFBF7] text-[#5C433A]">
-    <!-- React 應用的掛載點 -->
     <div id="root"></div>
 
-    <!-- 應用主體程式碼 (React + JSX) -->
     <script type="text/babel" data-type="module">
         import React, { useState, useEffect } from 'https://esm.sh/react@18';
         import { createRoot } from 'https://esm.sh/react-dom@18/client';
@@ -35,6 +30,9 @@
           Calendar, CheckCircle2, Loader2, Edit2, 
           ChevronRight, ChevronLeft, LogOut, Save, Image as ImageIcon
         } from 'https://esm.sh/lucide-react@0.292.0';
+
+        // ⚠️ 請將下方的網址替換為你部署 Google Apps Script 產生的網址
+        const GAS_API_URL = "請將你的_GAS_網頁應用程式_URL_貼在這裡";
 
         // --- 自定義主題色系 (大地暖色調) ---
         const theme = {
@@ -83,7 +81,6 @@
             showToast('已登出系統');
           };
 
-          // 尚未登入時顯示登入畫面
           if (!user) {
             return <LoginView onLogin={(userData) => { 
               setUser(userData); 
@@ -159,7 +156,7 @@
                 <p className="text-center text-[#8B736A] mb-8 text-sm">請點擊下方帳號進行登入測試</p>
                 
                 <button 
-                  onClick={() => onLogin({ role: 'physician', name: '黃琪雅', department: '一般內科 (7310)' })}
+                  onClick={() => onLogin({ role: 'physician', name: '黃琪雅', department: '一般內科' })}
                   className="w-full flex items-center justify-between p-4 rounded-xl border border-[#EBE3DC] hover:border-[#C27A62] hover:bg-[#FDFBF7] transition-all group"
                 >
                   <div className="flex items-center gap-4">
@@ -183,8 +180,8 @@
           const [tab, setTab] = useState('form');
           const [isUploading, setIsUploading] = useState(false);
           const [aiProcessed, setAiProcessed] = useState(false);
+          const [isSaving, setIsSaving] = useState(false); // 新增：儲存中的狀態
           
-          // 表單資料狀態 (依據您提供的圖片欄位設計)
           const [formData, setFormData] = useState({
             clinicalTeaching: '',
             pgyGuidance: '',
@@ -196,11 +193,9 @@
             setIsUploading(true);
             setAiProcessed(false);
             
-            // 模擬 AI 處理延遲
             setTimeout(() => {
               setIsUploading(false);
               setAiProcessed(true);
-              // 自動填入模擬資料 (從圖片解析而來)
               setFormData({
                 clinicalTeaching: '臨床病例教學討論: B / 114.12.11; 22; 24\n聯合討論會: H(教學檢討會) / 114.12.15\n死亡或併發症討論會: G / 114.11.08; 15; 22; 29',
                 pgyGuidance: 'PGY1 曾麟斐 (2分)\nUGY 劉林昌 (1分)',
@@ -211,8 +206,47 @@
             }, 2500);
           };
 
-          const handleSave = () => {
-            showToast('本月績效資料已成功儲存！');
+          // 🌟 核心修改：將資料寫入 Google 試算表的 API 呼叫
+          const handleSave = async () => {
+            if (!GAS_API_URL || GAS_API_URL === "https://script.google.com/macros/s/AKfycbyEUIzdGZVpQWXUpmc_e3C7CJcRDMCXuwE0dpLaUeSoRKqlmESL82aDMozq8rVYMria/exec") {
+               showToast;
+               return;
+            }
+
+            setIsSaving(true);
+            showToast("正在傳送資料至資料庫...");
+
+            // 準備要傳送給 GAS 的 JSON 格式資料，Key 對應試算表第一列
+            const recordToSave = {
+              id: "P" + Date.now(),
+              month: `${year}-${month.toString().padStart(2, '0')}`,
+              physician_name: user.name,
+              teaching_cases: formData.clinicalTeaching,
+              trainee_guidance: formData.pgyGuidance,
+              public_affairs: formData.departmentAffairs,
+              achievements: formData.hospitalAffairs,
+              status: "pending"
+            };
+
+            try {
+              const response = await fetch(GAS_API_URL, {
+                method: "POST",
+                body: JSON.stringify(recordToSave)
+              });
+              
+              const result = await response.json();
+              if (result.status === "success") {
+                showToast('資料已成功寫入 Google 試算表！');
+                setAiProcessed(false); // 儲存後重置表單狀態
+              } else {
+                showToast('儲存失敗：' + result.message);
+              }
+            } catch (error) {
+              console.error("寫入錯誤:", error);
+              showToast('網路錯誤，無法連線至資料庫。');
+            } finally {
+              setIsSaving(false);
+            }
           };
 
           const handleFormChange = (field, value) => {
@@ -310,10 +344,11 @@
                         </div>
                         <button 
                           onClick={handleSave} 
-                          disabled={!aiProcessed}
-                          className={`${!aiProcessed ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : `${theme.primary} ${theme.primaryHover} text-white shadow-sm`} px-5 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2`}
+                          disabled={!aiProcessed || isSaving}
+                          className={`${(!aiProcessed || isSaving) ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : `${theme.primary} ${theme.primaryHover} text-white shadow-sm`} px-5 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2`}
                         >
-                          <Save className="w-4 h-4" /> 儲存並送出
+                          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} 
+                          {isSaving ? '儲存中...' : '儲存並送出'}
                         </button>
                       </div>
 
@@ -322,25 +357,25 @@
                           label="一、科教學項目 (臨床病例教學/醫學文獻討論)" 
                           value={formData.clinicalTeaching} 
                           onChange={(v) => handleFormChange('clinicalTeaching', v)}
-                          editable={aiProcessed}
+                          editable={aiProcessed && !isSaving}
                         />
                         <FormField 
                           label="二、住院醫師及實習醫學生指導" 
                           value={formData.pgyGuidance} 
                           onChange={(v) => handleFormChange('pgyGuidance', v)}
-                          editable={aiProcessed}
+                          editable={aiProcessed && !isSaving}
                         />
                         <FormField 
                           label="三、科公共事務貢獻 (一般/特定 KPI)" 
                           value={formData.departmentAffairs} 
                           onChange={(v) => handleFormChange('departmentAffairs', v)}
-                          editable={aiProcessed}
+                          editable={aiProcessed && !isSaving}
                         />
                         <FormField 
                           label="四、部公共事務貢獻 (全院主管/院外競賽)" 
                           value={formData.hospitalAffairs} 
                           onChange={(v) => handleFormChange('hospitalAffairs', v)}
-                          editable={aiProcessed}
+                          editable={aiProcessed && !isSaving}
                         />
                       </div>
                     </div>
